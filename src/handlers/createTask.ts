@@ -32,7 +32,7 @@ export const handler = async (
   } catch (error) {
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: "Could not create task" }),
+      body: JSON.stringify({ error: `Could not create task: ${error}` }),
     };
   }
 };
