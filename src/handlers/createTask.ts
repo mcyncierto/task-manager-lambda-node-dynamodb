@@ -1,9 +1,9 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from "aws-lambda";
-import { DynamoDB } from "aws-sdk";
+import { SQS } from "aws-sdk";
 import { v4 as uuidv4 } from "uuid";
 
-const dynamoDb = new DynamoDB.DocumentClient();
-const TABLE_NAME = process.env.TABLE_NAME || "Tasks";
+const sqs = new SQS();
+const TASK_QUEUE_URL = process.env.TASK_QUEUE_URL!;
 
 export const handler = async (
   event: APIGatewayProxyEvent
@@ -26,7 +26,13 @@ export const handler = async (
       createdAt: new Date().toISOString(),
     };
 
-    await dynamoDb.put({ TableName: TABLE_NAME, Item: task }).promise();
+    // Send the task to SQS
+    const params = {
+      QueueUrl: TASK_QUEUE_URL,
+      MessageBody: JSON.stringify(task),
+    };
+
+    await sqs.sendMessage(params).promise();
 
     return { statusCode: 201, body: JSON.stringify(task) };
   } catch (error) {

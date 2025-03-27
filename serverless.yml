@@ -6,12 +6,27 @@ provider:
   region: ap-southeast-1 # Change to your preferred AWS region
   environment:
     TABLE_NAME: Tasks
+    TASK_QUEUE_URL:
+      Fn::GetAtt:
+        - TaskQueue
+        - QueueUrl
   iamRoleStatements:
     - Effect: Allow
       Action:
         - dynamodb:PutItem
         - dynamodb:GetItem
       Resource: arn:aws:dynamodb:ap-southeast-1:211507862286:table/Tasks
+
+    - Effect: Allow
+      Action:
+        - sqs:SendMessage
+        - sqs:ReceiveMessage
+        - sqs:DeleteMessage
+        - sqs:GetQueueUrl
+      Resource:
+        Fn::GetAtt:
+          - TaskQueue
+          - Arn
 
 functions:
   createTask:
@@ -26,6 +41,17 @@ functions:
       - http:
           path: task/{taskId}
           method: get
+  processTaskQueue:
+    handler: src/handlers/processTaskQueue.handler
+    events:
+      - sqs:
+          arn:
+            Fn::GetAtt:
+              - TaskQueue
+              - Arn
+          batchSize: 5
+    environment:
+      TABLE_NAME: Tasks
 
 resources:
   Resources:
@@ -40,3 +66,8 @@ resources:
           - AttributeName: taskId
             KeyType: HASH
         BillingMode: PAY_PER_REQUEST
+
+    TaskQueue:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: taskQueue
